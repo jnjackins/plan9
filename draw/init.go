@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"image"
-	"log"
 	"os"
 	"sync"
 
@@ -36,6 +35,8 @@ type Display struct {
 	Black       *Image // Pre-allocated color.
 	Opaque      *Image // Pre-allocated color.
 	Transparent *Image // Pre-allocated color.
+
+	ExitC chan struct{}
 }
 
 // An Image represents an image on the server, possibly visible on the display.
@@ -67,9 +68,8 @@ const (
 )
 
 // Init starts and connects to a server and returns a Display structure through
-// which all graphics will be mediated. The arguments are an error channel on
-// which to deliver errors (currently unused), the window label, and the window
-// size as a string in the form XxY, as in "1000x500"; the units are pixels.
+// which all graphics will be mediated. The arguments are the window label and the window
+// dimensions in pixels.
 func Init(label string, width, height int) (*Display, error) {
 	c, err := drawfcall.New()
 	if err != nil {
@@ -120,14 +120,16 @@ func Init(label string, width, height int) (*Display, error) {
 		return nil, err
 	}
 	if err := d.flush(true); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	screen := d.ScreenImage
 	screen.draw(screen.R, d.White, nil, image.ZP)
 	if err := d.flush(true); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
+
+	d.ExitC = make(chan struct{}, 0)
 
 	return d, nil
 }
@@ -150,9 +152,6 @@ func (d *Display) Attach(ref int) error {
 	}
 	d.ScreenImage.free()
 	d.ScreenImage, err = allocwindow(d.ScreenImage, d.Screen, i.R, ref, White)
-	if err != nil {
-		log.Fatal("aw", err)
-	}
 	return err
 }
 

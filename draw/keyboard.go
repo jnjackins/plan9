@@ -1,7 +1,5 @@
 package draw
 
-import "log"
-
 // Keyboardctl is the source of keyboard events.
 type Keyboardctl struct {
 	C <-chan rune // Channel on which keyboard characters are delivered.
@@ -17,8 +15,11 @@ func (d *Display) InitKeyboard() *Keyboardctl {
 func kbdproc(d *Display, ch chan rune) {
 	for {
 		r, err := d.conn.ReadKbd()
-		if err != nil {
-			log.Fatal(err)
+		if err != nil && err.Error() != "EOF" {
+			panic(err)
+		} else if err != nil {
+			d.ExitC <- struct{}{} // signal client to shut down the display
+			return
 		}
 		ch <- r
 	}

@@ -1,11 +1,6 @@
 package draw
 
-import (
-	"fmt"
-	"image"
-	"log"
-	"os"
-)
+import "image"
 
 // Mouse is the structure describing the current state of the mouse.
 type Mouse struct {
@@ -20,7 +15,7 @@ type Mouse struct {
 // The Mousectl's Mouse is updated after send so it doesn't
 // have the wrong value if the sending goroutine blocks during send.
 // This means that programs should receive into Mousectl.Mouse
-//  if they want full synchrony.
+// if they want full synchrony.
 type Mousectl struct {
 	Mouse                // Store Mouse events here.
 	C       <-chan Mouse // Channel of Mouse events.
@@ -30,7 +25,7 @@ type Mousectl struct {
 
 // InitMouse connects to the mouse and returns a Mousectl to interact with it.
 func (d *Display) InitMouse() *Mousectl {
-	ch := make(chan Mouse, 10)
+	ch := make(chan Mouse, 1)
 	rch := make(chan bool, 2)
 	mc := &Mousectl{
 		C:       ch,
@@ -44,8 +39,11 @@ func (d *Display) InitMouse() *Mousectl {
 func mouseproc(mc *Mousectl, d *Display, ch chan Mouse, rch chan bool) {
 	for {
 		m, resized, err := d.conn.ReadMouse()
-		if err != nil {
-			log.Fatal(err)
+		if err != nil && err.Error() != "EOF" {
+			panic(err)
+		} else if err != nil {
+			d.ExitC <- struct{}{} // signal client to shut down the display
+			return
 		}
 		if resized {
 			rch <- true
@@ -73,7 +71,6 @@ func (d *Display) MoveTo(pt image.Point) error {
 	defer d.mu.Unlock()
 	err := d.conn.MoveTo(pt)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "MoveTo: %v\n", err)
 		return err
 	}
 	return nil
