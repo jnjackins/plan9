@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"code.google.com/p/jnj.plan9/draw/drawfcall"
+	"github.com/jnjackins/plan9/draw/drawfcall"
 )
 
 // Display locking:
