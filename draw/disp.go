@@ -222,6 +222,10 @@ func (d *Display) Scale(n int) int {
 	return (n*d.DPI + DefaultDPI/2) / DefaultDPI
 }
 
+func (d *Display) SetLabel(label string) error {
+	return d.conn.Label(label)
+}
+
 func atoi(b []byte) int {
 	i := 0
 	for i < len(b) && b[i] == ' ' {
